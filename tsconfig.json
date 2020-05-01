@@ -1,0 +1,7 @@
+{
+  "compilerOptions": {
+      "baseUrl": "./",
+      "paths": {"google": ["types/google.script.d"]},
+      "typeRoots": ["types", "node_modules/@types"],
+    }
+}

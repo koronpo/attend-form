@@ -1,0 +1,8 @@
+// スプレッドシートを指定して作成
+clasp create --parentId <スプレッドシートのID> --title <プロジェクト名>
+
+// deploy
+clasp deploy
+
+// open
+clasp open --webapp

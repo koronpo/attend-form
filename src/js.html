@@ -1,0 +1,188 @@
+<script src="https://cdnjs.cloudflare.com/ajax/libs/smooth-scroll/16.1.0/smooth-scroll.min.js" charset="utf-8"></script>
+<script src="https://unpkg.com/vue"></script>
+<script src="https://unpkg.com/vue-material"></script>
+<script>
+  Vue.use(VueMaterial.default);
+  var vm = new Vue({
+    el: '#app',
+    data: {
+      docName: ''
+      ,classList: null
+      , className: ''
+      , loadingStyle: {
+        'display': 'none'
+      }
+      , initState: 'loading'
+      , classState: 'loading'
+      , className: ''
+      , startTime: ''
+      , endTime: ''
+      , stList: null
+      , form: {
+          className: ''
+          , stName: ''
+          , isStNameInvalid: false
+          , stNo: '100005'  // TODO デバッグ用
+          , isStNoInvalid: false
+          , isNotStNoCompare: false
+          , classPass: 'abcd'  // TODO デバッグ用
+          , isClassPassInvalid: false
+      }
+      , isPassError: false
+      , isSubmitSuccess: false
+      , isSubmitError: false
+      , isDuplicateSn: false
+      , isDuplicateKey: false
+      , saying: {
+        sayingDetal: ''
+        , sayingUser: ''
+        , sayingUserInfo: ''
+      }
+    },
+    methods: {
+      // 初期データ取得
+      getSheet: function () {
+        vm.loadingOn();
+        //GAS内のコード読み出し
+        google.script.run
+          .withSuccessHandler(function (data) {
+            // this.lists = data; この処理だとDOMが更新されない
+            vm.docName = data.docName
+            vm.classList = data.classList;
+            vm.initState = 'success';
+            vm.loadingOff();
+          })
+          .withFailureHandler(function (data) {
+            vm.gasError(data);
+            vm.initState = 'error';
+            vm.loadingOff();
+          })
+          .getBaseData();
+      },
+      // ローディング表示
+      loadingOn: function() {
+        vm.loadingStyle['display'] = 'flex';
+      },
+      // ローディング非表示
+      loadingOff: function() {
+        vm.loadingStyle['display'] = 'none';
+      },
+      // 画面初期化
+      window:onload = function() {
+       vm.getSheet();
+      },
+      // GAS処理エラー時にログ出力
+      gasError: function(data) {
+       console.log('エラー　取得したデータ: ' + JSON.stringify(data));
+      },
+      // 入力エラーフラグクリア
+      clearInvalid: function(e) {
+        switch (e) {
+          case 'stName':
+            vm.form.isStNameInvalid = false;
+          break;
+          case 'stNo':
+            vm.form.isStNoInvalid = false;
+          break;
+          case 'classPass':
+            vm.form.isClassPassInvalid = false;
+            vm.form.isNotStNoCompare = false;
+          break;
+        }
+      },
+      // フォーム送信チェック
+      checkForm: function(e) {
+        let isError = false;
+        if (!vm.form.stName) {
+          vm.form.isStNameInvalid = true;
+          isError = true;
+        }
+        if (!vm.form.stNo) {
+          vm.form.isStNoInvalid = true;
+          isError = true;
+        }
+        if (!vm.form.classPass) {
+          vm.form.isClassPassInvalid = true;
+          isError = true;
+        }
+        // 選択氏名と学籍番号のチェック
+        if (vm.form.stName && vm.form.stNo) {
+          const stFilterArray = vm.stList.filter(function(item, index){
+            if (item.氏名 == vm.form.stName) return true;
+          });
+          const tempStNo = stFilterArray[0].学籍番号;
+          if (tempStNo !== vm.form.stNo) {
+            vm.form.isStNoInvalid = true;
+            vm.form.isNotStNoCompare = true;
+          }
+        }
+        // 送信処理
+        if (!isError) {
+          vm.form.className = vm.className;
+          vm.submitData();
+        }
+      },
+      // 送信処理
+      submitData: function(e) {
+        vm.loadingOn();
+        //GAS内のコード読み出し
+        google.script.run
+          .withSuccessHandler(function (data) {
+            console.log('data: ' + JSON.stringify(data));
+            if (data.retType === 'p') {
+              vm.isPassError = true;
+              vm.loadingOff();
+            }
+            if (data.retType === 's') {
+              vm.isSubmitSuccess = true;
+              vm.saying.sayingDetal = data.sayingDetal;
+              vm.saying.sayingUser = data.sayingUser;
+              vm.saying.sayingUserInfo = data.sayingUserInfo;
+              let scroll = new SmoothScroll();
+              // DOM 生成と取得のタイミングが合わないので無理やり合わす
+              setTimeout(function(){
+                let anchor = vm.$el.querySelector('#submitEnd');
+                scroll.animateScroll(anchor);
+                vm.loadingOff();
+              }, 100);
+            }
+            if (data.retType === 'sn') {
+              vm.isDuplicateSn = true;
+              vm.loadingOff();
+            }
+            if (data.retType === 'key') {
+              vm.isDuplicateKey = true;
+              vm.loadingOff();
+            }
+          })
+          .withFailureHandler(function (data) {
+            vm.isSubmitError = true;
+            vm.loadingOff();
+          })
+          .writeData(vm.form);
+      },
+    },
+    watch: {
+      className: function(event) {
+        // event には選択値が入っている
+        vm.loadingOn();
+        google.script.run
+          .withSuccessHandler(function (data) {
+            vm.className = event;
+            vm.startTime = data.startTime;
+            vm.endTime = data.endTime;
+            vm.stList = data.stList;
+            // vm.classList = data;
+            vm.classState = 'success';
+            vm.loadingOff();
+          })
+          .withFailureHandler(function (data) {
+            vm.gasError(data);
+            vm.classState = 'error';
+            vm.loadingOff();
+          })
+          .getClassDetail(event);
+      },
+    },
+  })
+</script>

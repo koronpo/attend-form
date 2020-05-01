@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <meta content="width=device-width,initial-scale=1,minimal-ui" name="viewport">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700,400italic|Material+Icons">
+    <link rel="stylesheet" href="https://unpkg.com/vue-material/dist/vue-material.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/vue-material/dist/theme/default.css">
+    <?!= HtmlService.createHtmlOutputFromFile('css').getContent(); ?>
+  </head>
+  <body>
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.13.0/js/all.min.js"></script>
+
+    <div id="app">
+      <md-toolbar class="md-primary">
+        <h1 class="md-title">{{docName}}</h1>
+      </md-toolbar>
+      <template><div class="wrapper"><!-- wrapper インデントが深くなるので並列に -->
+        <!-- 授業選択エリア開始 -->
+        <div class="md-layout">
+          <div class="md-layout-item">
+            <div v-if="initState === 'success'">
+              <h2 class="title">授業を選択してください</h2>
+              <md-field class="obj-row-m">
+                <label for="movie">授業選択</label>
+                <md-select
+                  v-model="className"
+                  v-bind:disabled="isSubmitSuccess || isSubmitError">
+                  <md-option v-for="list in classList" v-bind:value="list">
+                    {{list}}
+                  </md-option>
+                </md-select>
+              </md-field>
+            </div>
+            <p v-else-if="initState === 'loading'" class="info">初期化中...</p>
+            <p v-else class="error">初期化に失敗しました</p>
+          </div>
+        </div>
+        <!-- 授業選択エリア終了 -->
+        <!-- 授業情報エリア開始 -->
+        <div class="md-layout">
+          <div class="md-layout-item">
+            <div v-if="classState === 'success'">
+              <div class="class-info-area area-m">
+                <md-list class="md-double-line">
+                  <md-subheader class="class-name">{{className}}</md-subheader>
+                  <md-list-item>
+                    <md-icon class="md-primary">access_time</md-icon>
+                    <div class="md-list-item-text">
+                      <span>{{startTime}}</span>
+                      <span>開始</span>
+                    </div>
+                  </md-list-item>
+                  <md-list-item class="md-inset">
+                    <div class="md-list-item-text">
+                      <span>{{endTime}}</span>
+                      <span>終了</span>
+                    </div>
+                  </md-list-item>
+                </md-list>
+              </div>
+              <!-- 入力エリア開始 -->
+              <form id="myForm" novalidate>
+                <h2 class="title">氏名を選択してください</h2>
+                <md-field
+                  class="obj-row-m"
+                  :class="{ 'md-invalid': form.isStNameInvalid }">
+                  <label for="movie">氏名</label>
+                  <md-select
+                    v-model="form.stName"
+                    @focus="clearInvalid('stName')"
+                    v-bind:disabled="isSubmitSuccess || isSubmitError">
+                    <md-option v-for="list in stList" v-bind:value="list.氏名">
+                      {{list.氏名}}
+                    </md-option>
+                  </md-select>
+                  <span class="md-error">氏名は必須です</span>
+                </md-field>
+                <h2 class="title">学籍番号を入力してください</h2>
+                <md-field :class="{ 'md-invalid': form.isStNoInvalid }">
+                  <label for="stNo">学籍番号</label>
+                  <md-input
+                    name="stNo"
+                    id="stNo"
+                    v-model="form.stNo"
+                    @focus="clearInvalid('stNo')"
+                    v-bind:disabled="isSubmitSuccess || isSubmitError">
+                  </md-input>
+                  <span class="md-error" v-if="!form.isNotStNoCompare">
+                    学籍番号は必須です
+                  </span>
+                  <span class="md-error" v-if="form.isNotStNoCompare">
+                    氏名と学籍番号が一致しません
+                  </span>
+                </md-field>
+                <h2 class="title">授業パスワードを入力してください</h2>
+                <md-field :class="{ 'md-invalid': form.isClassPassInvalid }">
+                  <label for="classPass">授業パスワード</label>
+                  <md-input
+                    name="classPass"
+                    id="classPass"
+                    v-model="form.classPass"
+                    @focus="clearInvalid('classPass')"
+                    v-bind:disabled="isSubmitSuccess || isSubmitError">
+                  </md-input>
+                  <span class="md-error">授業パスワードは必須です</span>
+                </md-field>
+                <div
+                  class="center button-area"
+                  v-if="!isSubmitSuccess && !isSubmitError">
+                  <md-button class="md-raised md-primary" @click="checkForm">
+                    送信
+                  </md-button>
+                </div>
+                <md-dialog-alert
+                  :md-active.sync = "isPassError"
+                  md-title = "授業パスワードが一致しませんでした"
+                  md-content = "授業パスワードが一致しませんでした。<br />パスワードを確認し再度入力してください。">
+                </md-dialog-alert>
+                <md-dialog-alert
+                  :md-active.sync = "isDuplicateSn"
+                  md-title = "出席は受付済みです"
+                  md-content = "選択した氏名での本日の出席は受付済みです。<br />不明な点がある場合は担当教員に連絡してください。">
+                </md-dialog-alert>
+                <md-dialog-alert
+                  :md-active.sync = "isDuplicateKey"
+                  md-title = "このアカウントでの回答は受付済みです"
+                  md-content = "ログイン中のアカウントでの本日の出席は受付済みです。<br />不明な点がある場合は担当教員に連絡してください。">
+                </md-dialog-alert>
+              </form>
+              <!-- 入力エリア終了 -->
+              <!-- 送信処理成功 -->
+              <div
+                id="submitEnd"
+                class="md-layout md-gutter area-p submit-end"
+                v-if="isSubmitSuccess">
+                <div class="
+                  md-layout-item
+                  center
+                  md-xlarge-size-30
+                  md-large-size-30
+                  md-medium-size-30
+                  md-small-size-30
+                  md-xsmall-size-100"
+                  v-if="saying.sayingDetal !== ''">
+                  <span class="material-icons">tag_faces</span>
+                  <p class="message">
+                    出席を<br class="pc">受付けました
+                  </p>
+                </div>
+                <div class="
+                  md-layout-item
+                  md-xlarge-size-70
+                  md-large-size-70
+                  md-medium-size-70
+                  md-small-size-70
+                  md-xsmall-size-100"
+                  v-if="saying.sayingDetal !== ''">
+                  <h3>本日の勉強の名言</h3>
+                  <blockquote class="blockquote">
+                    <p>
+                      {{saying.sayingDetal}}
+                    </p>
+                    <span class="s-user">
+                      {{saying.sayingUser}}
+                    </span>
+                    <span class="s-info">
+                      ({{saying.sayingUserInfo}})
+                    </span>
+                  </blockquote>
+                </div>
+                <div
+                  class="md-layout-item center"
+                  v-if="saying.sayingDetal === ''">
+                  <span class="material-icons">tag_faces</span>
+                  <p class="message">
+                    出席を受付けました
+                  </p>
+                </div>
+              </div>
+              <!-- 送信処理成功ここまで -->
+              <!-- 送信処理失敗 -->
+              <div class="md-layout area-m" v-if="isSubmitError">
+                <div class="md-layout-item submit-end submit-error center">
+                  <span class="material-icons">mood_bad</span>
+                  <p>
+                    出席データを登録中に<br class="sp" />エラーが発生いたしました。<br />
+                    担当教員に連絡をしてください。
+                  </p>
+                </div>
+              </div>
+              <!-- 送信処理失敗ここまで -->
+
+            </div><!-- /classState: success -->
+            <p v-else-if="classState === 'error'" class="error">
+              授業データの取得に失敗しました
+            </p>
+          </div>
+        </div>
+        <!-- 授業情報エリア終了 -->
+        <div id="loading" class="loading" v-bind:style="loadingStyle">
+          <md-progress-spinner class="md-accent" :md-diameter="30" md-mode="indeterminate"></md-progress-spinner>
+        </div>
+      </div></template><!-- / wrapper インデントが深くなるので並列に -->
+    </div>
+
+    <?!= HtmlService.createHtmlOutputFromFile('js').getContent(); ?>
+  </body>
+</html>
+
+<!-- <div class="loading">
+  <i class="fas fa-redo-alt"></i>
+</div> -->
