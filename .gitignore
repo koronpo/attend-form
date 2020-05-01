@@ -8,7 +8,6 @@ appsscript.json
 **/dist
 /tmp
 **/out-tsc
-/src/*.js
 
 # dependencies
 **/node_modules
