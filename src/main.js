@@ -20,14 +20,17 @@ var WRITE_RESULT_DUPLICATE_KEY = 'key'; // ユーザー key 重複
 var ANS_ROW = 8; // 出席回答の開始セル行
 var ANS_COL = 4; // 出席回答の開始セル列
 var SAYYING_FLG = 'する'; // 格言フラグ値
-var SAYYING_FLG_ROW = 5; // 格言開始行
-var SAYYING_FLG_COL = 3; // 格言終了カラム
+var SAYYING_FLG_ROW = 5; // 格言フラグ行
+var SAYYING_FLG_COL = 3; // 格言フラグカラム
 var SAYYING_LIST_ROW = 2; // 格言開始行
 var SAYYING_LIST_COL = 3; // 格言終了カラム
-var PASS_LENGTH_ROW = 8; // パスワード長さ値行
+var PASS_LENGTH_ROW = 11; // パスワード長さ値行
 var PASS_LENGTH_COL = 3; // パスワード長さ値カラム
 var PASS_ROW = 6; // 授業シート内のパスワード行
 var PASS_COL = 2; // 授業シート内のパスワードカラム
+var PASS_FLG = 'する'; // パスワードフラグ値
+var PASS_FLG_ROW = 8; // パスワード日時生成フラグ行
+var PASS_FLG_COL = 3; // パスワード日時生成フラグカラム
 var PASS_STRINGS = "abcdefghijklmnopqrstuvwxyz0123456789"; // パスワード生成に使用する文字列
 // GAS
 function doGet() {
@@ -255,22 +258,30 @@ function adjustArray(_array) {
     });
     return ret;
 }
+// 日時バッチ
+function execDaylyBatch() {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG_SHEET);
+    var passFlg = sheet.getRange(PASS_FLG_ROW, PASS_FLG_COL).getValue();
+    // パスワード生成処理
+    if (passFlg === PASS_FLG) {
+        var passLength = sheet.getRange(PASS_LENGTH_ROW, PASS_LENGTH_COL).getValue();
+        this.changeClassPassword(passLength);
+    }
+}
 // 授業パスワード変更
-function changeClassPassword() {
+function changeClassPassword(passLength) {
     var targetClass = getBaseData().classList;
     var sheet;
     var password = '';
     for (var i = 0; i < targetClass.length; i++) {
         sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(targetClass[i]);
-        password = createPassword();
+        password = createPassword(passLength);
         sheet.getRange(PASS_ROW, PASS_COL).setValue(password);
     }
 }
 // パスワード文字列作成
-function createPassword() {
+function createPassword(passLength) {
     var ret = '';
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG_SHEET);
-    var passLength = sheet.getRange(PASS_LENGTH_ROW, PASS_LENGTH_COL).getValue();
     // 生成する文字列に含める文字セット
     var p = PASS_STRINGS;
     var pl = PASS_STRINGS.length;

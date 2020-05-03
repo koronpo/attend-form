@@ -19,14 +19,17 @@ const WRITE_RESULT_DUPLICATE_KEY = 'key';     // ユーザー key 重複
 const ANS_ROW = 8;                            // 出席回答の開始セル行
 const ANS_COL = 4;                            // 出席回答の開始セル列
 const SAYYING_FLG:string = 'する';            // 格言フラグ値
-const SAYYING_FLG_ROW = 5;                    // 格言開始行
-const SAYYING_FLG_COL = 3;                    // 格言終了カラム
+const SAYYING_FLG_ROW = 5;                    // 格言フラグ行
+const SAYYING_FLG_COL = 3;                    // 格言フラグカラム
 const SAYYING_LIST_ROW = 2;                   // 格言開始行
 const SAYYING_LIST_COL = 3;                   // 格言終了カラム
-const PASS_LENGTH_ROW = 8;                    // パスワード長さ値行
+const PASS_LENGTH_ROW = 11;                    // パスワード長さ値行
 const PASS_LENGTH_COL = 3;                    // パスワード長さ値カラム
 const PASS_ROW = 6;                           // 授業シート内のパスワード行
 const PASS_COL = 2;                           // 授業シート内のパスワードカラム
+const PASS_FLG:string = 'する';               // パスワードフラグ値
+const PASS_FLG_ROW = 8;                      // パスワード日時生成フラグ行
+const PASS_FLG_COL = 3;                       // パスワード日時生成フラグカラム
 const PASS_STRINGS = "abcdefghijklmnopqrstuvwxyz0123456789"; // パスワード生成に使用する文字列
 
 // Interface
@@ -344,25 +347,35 @@ function adjustArray(_array: Array<any>): Array<any> {
   return ret;
 }
 
+// 日時バッチ
+function execDaylyBatch() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG_SHEET);
+  const passFlg: string = sheet.getRange(PASS_FLG_ROW, PASS_FLG_COL).getValue();
+
+  // パスワード生成処理
+  if (passFlg === PASS_FLG) {
+    const passLength: number = sheet.getRange(PASS_LENGTH_ROW, PASS_LENGTH_COL).getValue();
+    this.changeClassPassword(passLength);
+  }
+}
+
 // 授業パスワード変更
-function changeClassPassword() {
+function changeClassPassword(passLength: number) {
   const targetClass: Array<any> = getBaseData().classList;
   let sheet: GoogleAppsScript.Spreadsheet.Sheet;
+
   let password: string = '';
 
   for (let i = 0; i < targetClass.length; i++) {
     sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(targetClass[i]);
-    password = createPassword();
+    password = createPassword(passLength);
     sheet.getRange(PASS_ROW, PASS_COL).setValue(password);
   }
 }
 
 // パスワード文字列作成
-function createPassword(): string {
+function createPassword(passLength: number): string {
   let ret = '';
-
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG_SHEET);
-  const passLength: number = sheet.getRange(PASS_LENGTH_ROW, PASS_LENGTH_COL).getValue();
 
   // 生成する文字列に含める文字セット
   var p = PASS_STRINGS;
