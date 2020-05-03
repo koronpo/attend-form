@@ -193,7 +193,7 @@ function checkDuplicateAns(formData, sheet, lastRow, nowDate) {
     var userKey = this.getUserKey();
     filterAnsArray = ansArray.filter(function (item) {
         var itemDate = Utilities.formatDate(new Date(item['日付']), 'JST', 'yyyy/MM/dd');
-        if (item['key'] === userKey
+        if (item['uniqueKey'] === userKey
             && itemDate === nowDate)
             return true;
     });

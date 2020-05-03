@@ -264,7 +264,7 @@ function checkDuplicateAns(
   filterAnsArray = ansArray.filter(function(item){
     let itemDate = Utilities.formatDate(new Date(item['日付']), 'JST', 'yyyy/MM/dd');
     if (
-      item['key'] === userKey
+      item['uniqueKey'] === userKey
       && itemDate === nowDate
     )return true;
   });
