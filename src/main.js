@@ -189,7 +189,9 @@ function checkDuplicateAns(formData, sheet, lastRow, nowDate) {
     // ユーザー key 重複チェック
     var userKey = this.getUserKey();
     filterAnsArray = ansArray.filter(function (item) {
-        if (item['key'] === userKey)
+        var itemDate = Utilities.formatDate(new Date(item['日付']), 'JST', 'yyyy/MM/dd');
+        if (item['key'] === userKey
+            && itemDate === nowDate)
             return true;
     });
     if (filterAnsArray.length > 0) {
