@@ -23,14 +23,16 @@ const SAYYING_FLG_ROW = 5;                    // 格言フラグ行
 const SAYYING_FLG_COL = 3;                    // 格言フラグカラム
 const SAYYING_LIST_ROW = 2;                   // 格言開始行
 const SAYYING_LIST_COL = 3;                   // 格言終了カラム
+const PASS_FLG:string = 'する';               // パスワードフラグ値
+const PASS_FLG_ROW = 8;                      // パスワード日時生成フラグ行
+const PASS_FLG_COL = 3;                       // パスワード日時生成フラグカラム
 const PASS_LENGTH_ROW = 11;                    // パスワード長さ値行
 const PASS_LENGTH_COL = 3;                    // パスワード長さ値カラム
 const PASS_ROW = 6;                           // 授業シート内のパスワード行
 const PASS_COL = 2;                           // 授業シート内のパスワードカラム
-const PASS_FLG:string = 'する';               // パスワードフラグ値
-const PASS_FLG_ROW = 8;                      // パスワード日時生成フラグ行
-const PASS_FLG_COL = 3;                       // パスワード日時生成フラグカラム
 const PASS_STRINGS = "abcdefghijklmnopqrstuvwxyz0123456789"; // パスワード生成に使用する文字列
+const LATE_ROW = 14;                           // 遅刻許容行
+const LATE_COL = 3;                           // 遅刻許容カラム
 
 // Interface
 interface IInitData {
@@ -212,8 +214,25 @@ function writeData(formData: IFormData): IReturnData {
     return ret;
   }
 
+  // 授業基本シート取得
+  const baseSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG_SHEET);
+
+  // 遅刻判定
+  let isLate: boolean = false;
+  const lateMinute = baseSheet.getRange(LATE_ROW, LATE_COL).getValue();
+  const startTime: string = sheet
+    .getRange(CLA_START_T_ROW, CLA_START_T_COL)
+    .getDisplayValue();
+  if (lateMinute !== '' && isFinite(lateMinute)) {
+    isLate = this.checkLate(
+      now
+      , startTime
+      , lateMinute
+    );
+  }
+
   const saying: ISayingData = this.getSaying();
-  if (getSayingFlg() === SAYYING_FLG && saying.sayingDetal !== '') {
+  if (getSayingFlg(baseSheet) === SAYYING_FLG && saying.sayingDetal !== '') {
     ret.sayingDetal = saying.sayingDetal;
     ret.sayingUser = saying.sayingUser;
     ret.sayingUserInfo = saying.sayingUserInfo;
@@ -229,8 +248,14 @@ function writeData(formData: IFormData): IReturnData {
   sheet.getRange(writeRow, ANS_COL + 2).setValue(nowDate);
   // 時刻
   sheet.getRange(writeRow, ANS_COL + 3).setValue(nowTime);
-  // key
+  // uniqueKey
   sheet.getRange(writeRow, ANS_COL + 4).setValue(getUserKey());
+  // 遅刻
+  if (isLate) {
+    sheet.getRange(writeRow, ANS_COL + 5).setValue('遅刻');
+  } else {
+    sheet.getRange(writeRow, ANS_COL + 5).setValue('-');
+  }
 
   return ret;
 }
@@ -290,8 +315,7 @@ function checkDuplicateAns(
 }
 
 // 格言フラグ値も取得
-function getSayingFlg(): string {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG_SHEET);
+function getSayingFlg(sheet: GoogleAppsScript.Spreadsheet.Sheet) {
   const isSaying: string = sheet.getRange(SAYYING_FLG_ROW, SAYYING_FLG_COL).getValue();
   return isSaying;
 }
@@ -391,4 +415,25 @@ function createPassword(passLength: number): string {
 function getUserKey(): string {
   const userKey = Session.getTemporaryActiveUserKey();
   return userKey;
+}
+
+// 遅刻チェック
+function checkLate(
+  now: Date
+  , startTime: string
+  , lateMinute: number
+): boolean {
+  let ret:boolean = false;
+  const nowDateStrimg = Utilities.formatDate(now, 'JST', 'yyyy/MM/dd');
+  const n = now.getTime();
+  const s = new Date(nowDateStrimg + ' ' + startTime).getTime();
+  let diff:number = n - s;
+
+  const lateMinuteMs = lateMinute * 60 * 1000;
+
+  if (diff >= lateMinuteMs) {
+    ret = true;
+  }
+
+  return ret;
 }
